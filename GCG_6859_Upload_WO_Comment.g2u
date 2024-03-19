@@ -1,0 +1,218 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Bryan Pham
+'08/04/2022
+'Customer: BLUELINE MANUFACTURING, LLC
+'Scope: update/ insert WO comment to Link comment and user field 6
+'BLU010-52520221553-0
+
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+f.Intrinsic.Control.CallSub(checkFolder)
+f.Intrinsic.Control.CallSub(Upload)
+Program.Sub.Main.End
+
+Program.Sub.checkFolder.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+v.Local.sFileTarget.Declare
+v.Local.bExists.Declare
+
+'create custom folder for upload and log
+f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sFileTarget)
+f.Intrinsic.File.DirExists(v.Local.sFileTarget,v.Local.bExists)
+f.Intrinsic.Control.If(v.Local.bExists,=,False)
+	f.Intrinsic.File.CreateDir(v.Local.sFileTarget)
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\UPLOAD",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sFileTarget)
+f.Intrinsic.File.DirExists(v.Local.sFileTarget,v.Local.bExists)
+f.Intrinsic.Control.If(v.Local.bExists,=,False)
+	f.Intrinsic.File.CreateDir(v.Local.sFileTarget)
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\FINISHED",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sFileTarget)
+f.Intrinsic.File.DirExists(v.Local.sFileTarget,v.Local.bExists)
+f.Intrinsic.Control.If(v.Local.bExists,=,False)
+	f.Intrinsic.File.CreateDir(v.Local.sFileTarget)
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\LOG",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sFileTarget)
+f.Intrinsic.File.DirExists(v.Local.sFileTarget,v.Local.bExists)
+f.Intrinsic.Control.If(v.Local.bExists,=,False)
+	f.Intrinsic.File.CreateDir(v.Local.sFileTarget)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\LOG\Error_{2}.txt",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDate_Action,v.Local.sFileTarget)
+	f.Intrinsic.File.String2File(v.local.sFileTarget,V.Local.sError)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.checkFolder.End
+
+Program.Sub.Upload.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+v.Local.sFile.Declare
+V.Local.iWorksheetCounter.Declare
+V.Local.iRow.Declare
+v.Local.iCnt.Declare
+v.Local.sRow.Declare
+v.Local.bExists.Declare
+v.Local.sSQL.Declare
+v.Local.sFileSource.Declare
+V.Local.sFileTarget.Declare
+v.Local.fRet.Declare
+v.Local.sRet.Declare
+v.Local.sDate_Action.Declare
+v.Local.sTime_Action.Declare
+v.Local.sProgram_A.Declare
+v.Local.sIgnore_For_Usage.Declare
+v.Local.sUserID.Declare
+v.Local.sEmail.Declare
+v.Local.iUID.Declare
+v.Local.sTemp.Declare
+v.Local.sLog_NotFound.Declare
+v.Local.sLog_Success.Declare
+V.Local.sText.Declare
+v.Local.sSubject.Declare
+v.Local.sBody.Declare
+v.Local.sJob.Declare
+v.Local.sComment.Declare
+v.Local.sLinkID.Declare
+v.Local.sLinkID_Final.Declare
+v.Local.sMsg.Declare
+
+f.Intrinsic.UI.InvokeWaitDialog("Uploading WO comment...")
+'format date and time for finished upload file
+Function.Intrinsic.String.Format(v.Ambient.Date,"MMDDYY",v.Local.sDate_Action)
+Function.Intrinsic.String.Format(v.Ambient.Time,"HhNn",v.Local.sTime_Action)
+f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\UPLOAD\WO_COMMENT.xlsx",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sFile)
+f.Intrinsic.File.Exists(v.Local.sFile,v.Local.bExists)
+f.ODBC.Connection!con.OpenCompanyConnection
+	
+f.Intrinsic.Control.If(v.Local.bExists)
+	
+	'prepare the excel sheet to be read
+	F.Automation.MSExcel.CreateAppObject("MSExcel")
+	F.Automation.MSExcel.OpenWorkbook("MSEXcel","Workbook",v.Local.sFile)
+	f.Automation.MSExcel.GetWorksheetCount("Workbook",v.Local.iWorksheetCounter)
+	F.Automation.MSExcel.OpenWorksheet("Workbook","Worksheet",V.Local.iWorksheetCounter)
+	F.Automation.MSExcel.RowCount("Worksheet",V.Local.iRow)
+	
+	f.Intrinsic.Control.For(v.Local.iCnt,2,v.Local.iRow,1)
+	
+		'reads the sequence cell within the excel spreadsheet
+		F.Automation.MSExcel.ReadRow("Worksheet",V.Local.iCnt,1,3,V.local.sRow)
+		'set the local variables from the excel spreadsheet
+		F.Intrinsic.String.Split(V.Local.sRow,"*!*",V.Local.sRow)
+		v.Local.sTemp.Set(v.Local.sRow(0))
+		v.Local.sComment.Set(v.Local.sRow(1))
+
+		f.Intrinsic.String.Build("Uploading comment for {0}",v.Local.sTemp,v.Local.sMsg)
+		f.Intrinsic.UI.ChangeWaitStatus(v.Local.sMsg,v.Local.iCnt,2,v.Local.iRow)
+	
+		f.Intrinsic.String.Split(v.Local.sTemp,"-",v.Local.sTemp)
+		'if WO does not exist, log it
+		f.Intrinsic.String.Build("Select * from V_JOB_HEADER where JOB = '{0}' and SUFFIX = '{1}'",v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sSQL)
+		f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+		
+		f.Intrinsic.Control.If(v.Ambient.ExecuteAndReturnEOF,=,True)
+			f.Intrinsic.Control.If(v.Local.sLog_NotFound,<>,"")
+				f.Intrinsic.String.Build("{0}{1}{2}-{3}=====WO Not Found",v.Local.sLog_NotFound,v.Ambient.NewLine,v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sLog_NotFound)
+			f.Intrinsic.Control.Else
+				f.Intrinsic.String.Build("{0}-{1}=====WO Not Found",v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sLog_NotFound)
+			f.Intrinsic.Control.EndIf
+		'if WO exists
+		f.Intrinsic.Control.Else
+			'update User field 6
+			f.Intrinsic.String.Build("Select * from V_WO_USER_FLDS where JOB = '{0}' and SUFFIX = '{1}'",v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sSQL)
+			f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+			f.Intrinsic.Control.If(v.Ambient.ExecuteAndReturnEOF,=,True)
+				f.Intrinsic.String.Build("Insert into WO_USER_FLDS(JOB,SUFFIX,USER_6) values('{0}','{1}','{2}')",v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sComment,v.Local.sSQL)
+			f.Intrinsic.Control.Else
+				f.Intrinsic.String.Build("Update WO_USER_FLDS set USER_6 ='{0}' where JOB = '{1}' and SUFFIX = '{2}'",v.Local.sComment.PSQLFriendly,v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sSQL)
+			f.Intrinsic.Control.EndIf
+			f.ODBC.Connection!con.Execute(v.Local.sSQL)
+			
+			f.Intrinsic.String.Build("{0}{1}",v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sJob)
+			f.Intrinsic.String.Build("Select LINK_ID from V_LINK_DATA where ID = '{0}' and TYPE = '00020'",v.Local.sJob,v.Local.sSQL)
+			f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL,v.Local.sLinkID)
+			'if WO does not have note
+			f.Intrinsic.Control.If(v.Ambient.ExecuteAndReturnEOF,=,True)
+				'get the latest link ID and increment by 1
+				f.ODBC.Connection!con.ExecuteAndReturn("Select TOP 1 LINK_ID from V_LINK_DATA order by LINK_ID desc",v.Local.sLinkID)
+				f.Intrinsic.Math.Add(v.Local.sLinkID,1,v.Local.sLinkID)
+				f.Intrinsic.String.LPad(v.Local.sLinkID,"00020",9,v.Local.sLinkID_Final)
+				'add record to LINK_DATA
+				f.Intrinsic.String.Build("Insert into LINK_DATA(LINK_ID,TYPE,ID) values('{0}','{1}','{2}')",v.Local.sLinkID_Final,"00020",v.Local.sJob,v.Local.sSQL)
+				f.ODBC.Connection!con.Execute(v.Local.sSQL)
+				' then add NOTE to LINK_NOTE
+				f.Intrinsic.String.Build("Insert into LINK_NOTE(LINK_ID,NOTE,INFO0,INFO1,INFO2,INFO3,INFO4,INFO5,INFO6,INFO7) values({0},'{1}','{2}','{2}','{2}','{2}','{2}','{2}','{2}','{2}')",v.Local.sLinkID,v.Local.sComment.PSQLFriendly,"",v.Local.sSQL)
+				f.ODBC.Connection!con.Execute(v.Local.sSQL)
+			'WO already has note
+			f.Intrinsic.Control.Else
+				f.Intrinsic.String.Build("Select RTRIM(NOTE) from LINK_NOTE where LINK_ID = '{0}'",v.Local.sLinkID,v.Local.sSQL)
+				f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+				f.Intrinsic.String.Build("{0}{1}{2}",v.Local.sRet,v.Ambient.NewLine,v.Local.sComment,v.Local.sComment)
+				'Update Note
+				f.Intrinsic.String.Build("Update LINK_NOTE set NOTE = '{0}' where LINK_ID = '{1}'",v.Local.sComment.PSQLFriendly,v.Local.sLinkID,v.Local.sSQL)
+				f.ODBC.Connection!con.Execute(v.Local.sSQL)
+			f.Intrinsic.Control.EndIf
+			
+			'log WO updated
+			f.Intrinsic.Control.If(v.Local.sLog_Success,<>,"")
+				f.Intrinsic.String.Build("{0}{1}{2}-{3}/ {4}=====Update successfully",v.Local.sLog_Success,v.Ambient.NewLine,v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sComment,v.Local.sLog_Success)
+			f.Intrinsic.Control.Else
+				f.Intrinsic.String.Build("{0}-{1}/ {2}=====Update successfully",v.Local.sTemp(0),v.Local.sTemp(1),v.Local.sComment,v.Local.sLog_Success)
+			f.Intrinsic.Control.EndIf
+			
+		f.Intrinsic.Control.EndIf
+		
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	
+	F.Automation.MSExcel.DestroyAllObjects("MSEXcel","Workbook","Worksheet")
+	
+	'write log
+	f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\LOG\WONotFound_{2}_{3}.txt",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDate_Action,v.Local.sTime_Action,v.Local.sFileTarget)
+	f.Intrinsic.File.String2File(v.local.sFileTarget,v.Local.sLog_NotFound)
+	f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\LOG\UpdateSuccessfully_{2}_{3}.txt",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDate_Action,v.Local.sTime_Action,v.Local.sFileTarget)
+	f.Intrinsic.File.String2File(v.local.sFileTarget,v.Local.sLog_Success)
+	
+	'move upload file to FINISHED folder
+	f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\FINISHED\WO_COMMENT_{2}_{3}.xlxs",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDate_Action,v.Local.sTime_Action,v.Local.sFileTarget)
+	f.Intrinsic.File.MoveFile(v.Local.sFile,v.Local.sFileTarget,v.Local.fRet)
+f.Intrinsic.Control.Else
+
+	'email
+	f.Global.Security.GetUserId(v.Caller.User,v.Caller.CompanyCode,v.Local.iUID)
+	v.Local.sEmail.Set("Kurk@blueline.cc@!@Blase@blueline.cc")
+	f.Global.Messaging.QueueMessage(v.Caller.CompanyCode,v.Local.iUID,"6859 - Upload WO Comment","Update File Requires Attention","Ntense@blueline.cc",v.Local.sEmail,"Check on Update Excel File.",5,,False,,,,,,,,,False)
+
+	
+f.Intrinsic.Control.EndIf
+
+f.ODBC.Connection!con.Close
+
+f.Intrinsic.UI.CloseWaitDialog
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\LOG\Error_{2}.txt",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDate_Action,v.Local.sFileTarget)
+	f.Intrinsic.File.String2File(v.local.sFileTarget,V.Local.sError)
+	f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\LOG\WONotFound_{2}_{3}.txt",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDate_Action,v.Local.sTime_Action,v.Local.sFileTarget)
+	f.Intrinsic.File.String2File(v.local.sFileTarget,v.Local.sLog_NotFound)
+	f.Intrinsic.String.Build("{0}\CUSTOM\6859\{1}\LOG\UpdateSuccessfully_{2}_{3}.txt",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDate_Action,v.Local.sTime_Action,v.Local.sFileTarget)
+	f.Intrinsic.File.String2File(v.local.sFileTarget,v.Local.sLog_Success)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+
+Program.Sub.Upload.End
+
+Program.Sub.Comments.Start
+${$5$}$20.1.8238.20344$}$1
+${$6$}$bpham$}$20220812091116214$}$Di0riF4Q5RIv6jxva5zSWBaTvp+T0Dt6r7olMrhdMlFqgU57FmG5DcD8DkiuXY9S3f6P7EFZvxc=
+Program.Sub.Comments.End
